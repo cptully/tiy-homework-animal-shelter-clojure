@@ -1,8 +1,6 @@
 (ns tiy-homework-animal-shelter-clojure.menu-service
   (:require [clojure.string :as str]))
 
-
-
 ;; magic numbers
 (def list-animals 1)
 (def add-animal 2)
@@ -44,6 +42,20 @@
         (wait-for-string message required))
       value)))
 
+(defn wait-for-enter [message]
+   (println message)
+   (str/trim (read-line))
+   0)
+
+
+(defn prompt-to-continue []
+  (println "press enter to continue...")
+  (let [value (str/trim (read-line))]
+    (if (= (count value) 0)
+      (do
+        (println "\nPlease press <Enter>\n")
+        (prompt-to-continue))
+      value)))
 
 (defn prompt-for-menu-selection []
   (print "\n\n-- Main Menu --\n"
@@ -59,54 +71,88 @@
 (defn display-animals [animals]
   (if (= (count animals) 0)
     (do
-      (println "The list of animals in the shlter is empty.")
-      (wait-for-string "press any key to return to the menu" false))
+      (println "The list of animals in the shelter is empty.\n"))
     (do
-      ((print "index\tName\t\tSpecies\tBreed\n")
-       (for [i (range 0 (- (count animals) 1))]
-         (print (+ i 1) "\t" (:name (nth animals i)) "\t"(:species (nth animals i)) "\t" (:breed (nth animals i))))
-       (wait-for-string "press any key to return to the menu" false))))
+      (println "Name\tSpecies\tBreed")
+      (println "=========================================")
+      (doseq [animal animals]
+        (println (+ (.indexOf animals animal) 1) "\t" (:name animal) "\t" (:species animal) "\t" (:breed animal)))))
+  (wait-for-enter "\nPress Enter to continue...")
   animals)
 
-(defn create-animal []
+(defn create-animal [animals]
   (println "\n--- Add a new animal to the shelter's roster --\n")
-  {:name (wait-for-string "Name: " true)
+  (conj animals {:name (wait-for-string "Name: " true)}
    :species (wait-for-string "Species: " true)
    :breed (wait-for-string "Breed: " true)
-   :description (wait-for-string "Description or notes:" true)})
+   :description (wait-for-string "Description or notes:" true)))
 
 (defn view-animal [animals]
-  (def index (wait-for-int "please enter the idex of the animal to view. Enter 0 to display the list of animals" 0 (count animals)))
-  (if (> index 0)
-    (do
-      (print "\nName: " (:name (nth animals index)) "\n")
-      (print "Species: " (:species (nth animals index) "\n"))
-      (print "Breed: " (:breed (nth animals index) "\n"))
-      (print "Description: " (:description (nth animals index) "\n"))
-      (wait-for-string "Press any key to retunr to the menu" false))
-    (display-animals animals))
+  (let [index (wait-for-int "Please enter the idex of the animal to view. Enter 0 to display the list of animals" 0 (count animals))]
+    (if (> index 0)
+      (let [index (- index 1)
+            animal (nth animals index)]
+        (println "Name: " (:name animal))
+        (println "Species: " (:species animal))
+        (println "Breed: " (:breed animal))
+        (println "Description: " (:description animal))
+        (wait-for-enter "Press Eneter top continue..."))
+      (display-animals animals)))
   animals)
 
-(defn edit-animal [animals]
-  (def index (wait-for-int "please enter the idex of the animal to view. Enter 0 to display the list of animals" 0 (count animals)))
-  (if (> index 0)
-    (do
-      (print "\nName: " (:name (nth animals index)) "\n")
-      (print "Species: " (:species (nth animals index) "\n"))
-      (print "Breed: " (:breed (nth animals index) "\n"))
-      (print "Description: " (:description (nth animals index) "\n"))
-      (wait-for-string "Press any key to retunr to the menu" false))
-    (display-animals animals))
-  animals)
+(defn edit-animals [animals]
+  ;; ask which animal to edit index is 1 based from the UI
+  (let [animals animals
+        index (wait-for-int (str "Please enter the idex of the animal to edit."
+                                 "Enter 0 to display the list of animals") 0 (count animals))]
+
+    ;; if the user typed a valid index
+    (if (> index 0)
+      ;; then edit the animal
+      (let [index (dec index)  ;; index is 0 based for indexing the array
+            ;;animals animals
+            animal (nth animals index)
+
+            ;; prompt with existing data and ask for new data
+            name (wait-for-string (str "Name: " (:name animal) "\n") false)
+            species (wait-for-string (str "Species: " (:species animal "\n")) false)
+            breed (wait-for-string (str "Breed: " (:breed animal "\n")) false)
+            description (wait-for-string (str "Description: " (:description animal "\n")) false)
+
+            ;; check for null returns from user
+            name2 (if (= name "") (:name animal) name)
+            species2 (if (= species "") (:species animal) species)
+            breed2 (if (= breed "") (:breed animal) breed)
+            description2 (if (= description "") (:description animal) description)
+
+            ;; update local copy of animal
+            animal (assoc animal :name name2 :species species2 :breed breed2 :description description2)]
+            ;; assoc fails to update animals
+            ;; assoc-in crashes at runtime
+           (conj animals animal))
 
 
-;; (defn numeric? [s]
-;;   (if-let [s (seq s)]
-;;     (let [s (if (= (first s) \-) (next s) s)
-;;           s (drop-while #(Character/isDigit %) s)
-;;           s (if (= (first s) \.) (next s) s)
-;;           s (drop-while #(Character/isDigit %) s)]
-;;       (empty? s))))
+      ;;(wait-for-enter "\nPress enter to return to the menu")
+
+      ;; else dispolay the list of animals
+      (display-animals animals))))
+
+
+(defn delete-animal [animals]
+  (let [animals animals
+        index (- (wait-for-int (str "Please enter the idex of the animal to edit."
+                                 "Enter 0 to display the list of animals") 0 (count animals)) 1)]
+    (if (>= index 0)
+      (let [animals animals
+            animal (nth animals index)]
+        (println "Name: " (:name animal))
+        (println "Species: " (:species animal))
+        (println "Breed: " (:breed animal))
+        (println "Description: " (:description animal))
+        (if (= (wait-for-string "Are you sure you want to remove this animal? (y/n)" true) "y")
+          (conj (subvec animals 0 index) (subvec animals (inc index) (count animals))))))
+    (display-animals animals)))
+
 
 
 
