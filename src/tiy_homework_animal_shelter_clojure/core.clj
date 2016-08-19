@@ -10,7 +10,7 @@
       (let [main-menu-action (menu/prompt-for-menu-selection)]
         (cond
           (= main-menu-action menu/list-animals) (do
-                                                   (menu/display-animals animals)
+                                                   (menu/display-animals animals true)
                                                    (recur animals))
           (= main-menu-action menu/add-animal) (recur (menu/create-animal animals))
           (= main-menu-action menu/view-animals) (recur (menu/view-animal animals))
